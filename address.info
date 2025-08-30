@@ -1,0 +1,7 @@
+name = Address
+description = Provides a generic Address form element using Addressfield formats.
+package = Field types
+backdrop = 1.x
+type = module
+dependencies[] = addressfield
+

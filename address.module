@@ -1,0 +1,190 @@
+<?php
+
+/**
+ * @file
+ * Exposes a generic Address form element that reuses Addressfield handlers.
+ */
+
+/**
+ * Implements hook_element_info().
+ *
+ * Provides a simple, non-field form element type 'address' that renders
+ * a dynamic, country-aware address form using Addressfield's format plugins.
+ */
+function address_element_info() {
+  $types = array();
+
+  $types['address'] = array(
+    // Accept input and keep values nested.
+    '#input' => FALSE,
+    '#tree' => TRUE,
+    // Render like a fieldset without changing the element type.
+    '#theme_wrappers' => array('fieldset'),
+    // Handlers to use when generating the element. Defaults to 'address'.
+    '#format_handlers' => array('address'),
+    // Default values for the address parts. Callers may prefill these.
+    '#default_value' => array(),
+    // Optional: restrict list of countries and set a default.
+    '#available_countries' => array(),
+    '#default_country' => '',
+    // Optional AJAX wrapper id if caller wants to control it.
+    '#wrapper_id' => NULL,
+    // Standard processing and validation.
+    '#process' => array('address_element_process'),
+  );
+
+  return $types;
+}
+
+/**
+ * Process callback: build the inner address controls using Addressfield.
+ */
+function address_element_process($element, &$form_state, $form) {
+  // Ensure attributes array exists.
+  if (!isset($element['#attributes']) || !is_array($element['#attributes'])) {
+    $element['#attributes'] = array();
+  }
+
+  // Determine current address value (prefer submitted input, then values).
+  $address = array();
+  $submitted = NULL;
+  if (!empty($element['#parents'])) {
+    // Prefer raw input so AJAX changes (e.g., country) are reflected immediately.
+    $submitted = backdrop_array_get_nested_value($form_state['input'], $element['#parents']);
+    if (!is_array($submitted)) {
+      $submitted = backdrop_array_get_nested_value($form_state['values'], $element['#parents']);
+    }
+  }
+  if (is_array($submitted)) {
+    // When keeping the generated container as a child, values live under 'format'.
+    $address = (isset($submitted['format']) && is_array($submitted['format']))
+      ? $submitted['format']
+      : $submitted;
+  }
+  elseif (!empty($element['#value']) && is_array($element['#value'])) {
+    $address = $element['#value'];
+  }
+  elseif (!empty($element['#default_value'])) {
+    $address = $element['#default_value'];
+  }
+
+  // Prepare a minimal fake Field/Instance context so addressfield helpers work.
+  $field = array(
+    'field_name' => '_address_element',
+    'type' => 'addressfield',
+    'bundles' => array(),
+    'entity_types' => array('custom'),
+  );
+  $instance = array(
+    'widget' => array(
+      'type' => 'addressfield_standard',
+      'settings' => array(
+        'available_countries' => !empty($element['#available_countries'])
+          ? array_combine($element['#available_countries'], $element['#available_countries'])
+          : array(),
+        'default_country' => ($element['#default_country'] ?? ''),
+        'format_handlers' => !empty($element['#format_handlers'])
+          ? $element['#format_handlers']
+          : array('address'),
+      ),
+    ),
+    'required' => !empty($element['#required']),
+  );
+
+  // Ensure we have sane defaults resolved via addressfield.
+  $address += addressfield_default_values($field, $instance, $address);
+
+  // Build context for form mode generation.
+  $context = array(
+    'mode' => 'form',
+    'field' => $field,
+    'instance' => $instance,
+    'langcode' => LANGUAGE_NONE,
+    'delta' => 0,
+  );
+
+  // Handlers list (allow alteration via hook_addressfield_handlers_alter()).
+  $handlers = $instance['widget']['settings']['format_handlers'];
+  backdrop_alter('addressfield_handlers', $handlers, $address, $context);
+
+  // Generate the inner address form using Addressfield.
+  $format = addressfield_generate($address, $handlers, $context);
+
+  // Attach the generated subtree intact so its own #ajax works.
+  $element['format'] = $format;
+  $element['format']['#tree'] = TRUE;
+
+  // Ensure no stray #children/#value remain on the fieldset wrapper.
+  if (isset($element['#children']) && !is_string($element['#children'])) {
+    unset($element['#children']);
+  }
+
+  return $element;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function address_menu() {
+  $items = array();
+
+  $items['address/test'] = array(
+    'title' => 'Address test form',
+    'description' => 'Try the Address form element.',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('address_test_form'),
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Simple form to test the Address form element.
+ */
+function address_test_form($form, &$form_state) {
+  $form['intro'] = array(
+    '#markup' => t('Use this form to test the Address form element.'),
+  );
+
+  $form['address'] = array(
+    '#type' => 'address',
+    '#title' => t('Address'),
+    '#format_handlers' => array('name_full', 'organisation', 'address'),
+    '#default_value' => array(
+      'country' => 'CA',
+      'organisation_name' => 'AltaGrade',
+      'locality' => 'Toronto',
+      'postal_code' => 'M5A 1A1',
+      'thoroughfare' => '123 Main St',
+      'premise' => 'Apt 4B',
+      'first_name' => 'John',
+      'last_name' => 'Doe',
+      'administrative_area' => 'ON',
+    ),
+    '#available_countries' => array(),
+    '#default_country' => 'CA',
+    '#wrapper_id' => 'address-test-wrapper',
+  );
+
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for address_test_form().
+ */
+function address_test_form_submit($form, &$form_state) {
+  $address = $form_state['values']['address'] ?? array();
+  // Log full raw dump.
+  watchdog('address', 'Submitted test address: <pre>@dump</pre>', array('@dump' => print_r($address, TRUE)), WATCHDOG_INFO);
+  // Also show it on screen (sanitized) for convenience.
+  $dump = check_plain(print_r($address, TRUE));
+  backdrop_set_message(t('Address submitted:<br/><pre>!dump</pre>', array('!dump' => $dump)));
+}
