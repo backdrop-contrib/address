@@ -143,7 +143,7 @@ The module exposes a simple test page at `/address/test` showing the element in 
 ## Issues
 
 Bugs and feature requests should be reported in the issue queue:
-https://github.com/backdrop-contrib/bee/issues.
+https://github.com/backdrop-contrib/address/issues.
 
 ## Current Maintainers
 
