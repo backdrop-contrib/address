@@ -13,18 +13,25 @@ Provides a generic Form API element `#type = 'address'` that renders a dynamic, 
 ## Quick start (Form API)
 Add this element to any Backdrop form:
 ```php
-$form['address'] = array(
-  '#type' => 'address',
-  '#title' => t('Address'),
-  '#format_handlers' => array('name_full', 'organisation', 'address'),
-  '#default_value' => array(
-    'country' => 'US',
-    'organisation_name' => '',
-  ),
-  '#available_countries' => array('US', 'CA', 'GB', 'AU'),
-  '#default_country' => 'US',
-  '#wrapper_id' => 'address-test-wrapper',
-);
+ $form['address'] = array(
+    '#type' => 'address',
+    '#title' => t('Address'),
+    '#format_handlers' => array('name_full', 'organisation', 'address'),
+    '#default_value' => array(
+      'country' => 'CA',
+      'organisation_name' => 'AltaGrade',
+      'locality' => 'Toronto',
+      'postal_code' => 'M5A 1A1',
+      'thoroughfare' => '123 Main St',
+      'premise' => 'Apt 4B',
+      'first_name' => 'John',
+      'last_name' => 'Doe',
+      'administrative_area' => 'ON',
+    ),
+    '#available_countries' => array(),
+    '#default_country' => 'CA',
+    '#wrapper_id' => 'address-test-wrapper',
+  );
 ```
 
 On submit, the nested values are available under `$form_state['values']['address']`.
@@ -132,4 +139,19 @@ The module exposes a simple test page at `/address/test` showing the element in 
 - This module provides a Form API element, not a field storage type. Persist values yourself or map them into fields.
 - Available parts and validation vary by country and selected handlers.
 - Clear caches after changing handler availability or formats.
+
+## Issues
+
+Bugs and feature requests should be reported in the issue queue:
+https://github.com/backdrop-contrib/bee/issues.
+
+## Current Maintainers
+
+- [Alan Mels](https://github.com/alanmels) - [AltaGrade](https://www.altagrade.com)
+- Collaboration and co-maintainers welcome!
+
+## License
+
+This project is GPL v2 software.
+See the LICENSE.txt file in this directory for complete text.
 
