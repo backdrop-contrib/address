@@ -3,7 +3,7 @@
 Provides a generic Form API element `#type = 'address'` that renders a dynamic, country-aware address form by reusing the Addressfield module’s format handlers.
 
 - Module: Address
-- Requires: addressfield
+- Requires: [addressfield](https://github.com/backdrop-contrib/addressfield)
 - Test page: /address/test
 
 ## Installation
