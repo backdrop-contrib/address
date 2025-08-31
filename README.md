@@ -153,5 +153,5 @@ https://github.com/backdrop-contrib/address/issues.
 ## License
 
 This project is GPL v2 software.
-See the LICENSE.txt file in this directory for complete text.
+See the [LICENSE.txt](https://github.com/backdrop-contrib/address/blob/1.x-1.x/LICENSE.txt) file for complete text.
 
